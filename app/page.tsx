@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useChat } from "ai/react";
+import { MAX_MESSAGE_LENGTH } from "@/lib/chat-limits";
 import { PERSONAS, type Persona } from "@/lib/personas";
 
 const FEEDBACK_REQUEST =
@@ -242,6 +243,7 @@ function RehearsalRoom({
             onChange={handleInputChange}
             placeholder="Deliver your line..."
             aria-label="Your reply"
+            maxLength={MAX_MESSAGE_LENGTH}
             disabled={isLoading}
             className="flex-1 bg-transparent font-script text-sm text-stage-paper placeholder:text-stage-paperMuted focus:outline-none"
             autoFocus

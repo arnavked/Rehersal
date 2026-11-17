@@ -1,5 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { streamText, type CoreMessage } from "ai";
+import { MAX_MESSAGE_LENGTH } from "@/lib/chat-limits";
 import { getPersona, feedbackSystemPrompt } from "@/lib/personas";
 
 export const runtime = "edge";
@@ -7,7 +8,6 @@ export const maxDuration = 30;
 
 const MAX_REQUEST_BYTES = 64 * 1024;
 const MAX_MESSAGES = 40;
-const MAX_MESSAGE_LENGTH = 6_000;
 const MAX_TRANSCRIPT_LENGTH = 24_000;
 const MAX_FEEDBACK_OVERHEAD = MAX_MESSAGE_LENGTH + 256;
 
