@@ -167,7 +167,12 @@ function RehearsalRoom({
         )}
       </div>
 
-      <div className="script-scroll mt-6 flex-1 space-y-5 overflow-y-auto pr-1">
+      <div
+        className="script-scroll mt-6 flex-1 space-y-5 overflow-y-auto pr-1"
+        role="region"
+        aria-label="Rehearsal conversation"
+        aria-busy={isLoading}
+      >
         {visibleMessages.map((m) => {
           const isCoachMessage =
             ended &&
@@ -198,8 +203,14 @@ function RehearsalRoom({
           );
         })}
         {isLoading && (
-          <p className="font-script text-xs text-stage-paperMuted">
-            {ended ? "Your coach is reviewing the conversation…" : "…"}
+          <p
+            className="font-script text-xs text-stage-paperMuted"
+            role="status"
+            aria-live="polite"
+          >
+            {ended
+              ? "Your coach is reviewing the conversation…"
+              : `${persona.name.split(" ")[0]} is responding…`}
           </p>
         )}
       </div>
