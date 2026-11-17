@@ -41,13 +41,18 @@ No retraining, no redeploying a model — just edit the array and push.
 
 ## Resume-based interview
 
-The Hiring Manager rehearsal optionally accepts PDF, DOCX, TXT, and Markdown
-resumes up to 5 MB. `app/api/resume/route.ts` extracts text and
-`lib/resume-rag.ts` splits it into overlapping chunks. During the interview,
-the chat route selects a few chunks by keyword overlap and adds them as
-untrusted reference context for Claude. This lightweight retrieval needs no
-vector database or embedding service. Scanned image-only PDFs are not
-supported. Resume text stays in page memory and is not saved by this app.
+To use it, choose **Dana Whitfield** and upload a resume in the rehearsal room.
+The file is optional; the interview works without it. PDF, DOCX, TXT, and
+Markdown files are supported up to 5 MB, with extracted text limited to 30,000
+characters. Scanned image-only PDFs are not supported.
+
+`app/api/resume/route.ts` extracts the text, and `lib/resume-rag.ts` splits it
+into overlapping chunks. During each interview turn, the chat route selects up
+to three chunks by keyword overlap and adds them as untrusted reference context
+for Claude. This lightweight retrieval needs no vector database or embedding
+service. Relevant excerpts are sent to Anthropic; the app keeps the resume text
+in page memory and does not save it between visits. Leaving the rehearsal drops
+the uploaded resume from the page.
 
 ## Extending this
 
