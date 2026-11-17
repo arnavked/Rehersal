@@ -113,6 +113,9 @@ export async function POST(req: Request) {
   if (!persona) {
     return new Response("Unknown persona", { status: 400 });
   }
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return new Response("Chat service is not configured", { status: 503 });
+  }
 
   const system =
     mode === "feedback" ? feedbackSystemPrompt(persona) : persona.systemPrompt!;
