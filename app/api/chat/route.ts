@@ -7,7 +7,7 @@ import { isValidResumeChunks, retrieveResumeChunks } from "@/lib/resume-rag";
 export const runtime = "edge";
 export const maxDuration = 30;
 
-const MAX_REQUEST_BYTES = 128 * 1024;
+const MAX_REQUEST_BYTES = 256 * 1024;
 const MAX_MESSAGES = 40;
 const MAX_TRANSCRIPT_LENGTH = 24_000;
 const MAX_FEEDBACK_OVERHEAD = MAX_MESSAGE_LENGTH + 256;

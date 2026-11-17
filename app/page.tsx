@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useChat } from "ai/react";
 import { MAX_MESSAGE_LENGTH } from "@/lib/chat-limits";
 import { PERSONAS, type Persona } from "@/lib/personas";
@@ -104,6 +104,10 @@ function RehearsalRoom({
   onExit: () => void;
 }) {
   const [ended, setEnded] = useState(false);
+  const [resumeChunks, setResumeChunks] = useState<string[]>([]);
+  const [resumeFileName, setResumeFileName] = useState("");
+  const [resumeError, setResumeError] = useState("");
+  const [isReadingResume, setIsReadingResume] = useState(false);
   const {
     messages,
     input,
@@ -159,7 +163,7 @@ function RehearsalRoom({
         {!ended && (
           <button
             onClick={requestFeedback}
-            disabled={isLoading || messages.length < 3}
+            disabled={isLoading || isReadingResume || messages.length < 3}
             className="rounded-sm border border-stage-brass px-3 py-1.5 text-xs text-stage-brass transition-opacity hover:opacity-80 disabled:opacity-30"
           >
             End rehearsal — get feedback
@@ -232,6 +236,7 @@ function RehearsalRoom({
                 body: {
                   personaId: persona.id,
                   mode: ended ? "feedback" : "roleplay",
+                  ...(!ended ? { resumeChunks } : {}),
                 },
               })
             }
@@ -242,10 +247,103 @@ function RehearsalRoom({
         </div>
       )}
 
+      {persona.id === "hiring-manager" && (
+        <section className="mt-6 rounded-sm border border-stage-border bg-stage-surface p-4">
+          <label className="block text-sm text-stage-paper" htmlFor="resume-upload">
+            Optional: tailor this interview to your resume
+          </label>
+          <p
+            id="resume-help"
+            className="mt-1 text-xs leading-relaxed text-stage-paperMuted"
+          >
+            Upload a PDF, DOCX, TXT, or Markdown file (5 MB max). Relevant
+            passages are sent to Anthropic during the interview. Rehearsal does
+            not save the file or resume text.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <input
+              id="resume-upload"
+              type="file"
+              accept=".pdf,.docx,.txt,.md"
+              aria-describedby="resume-help"
+              aria-label="Upload a resume"
+              disabled={isLoading || isReadingResume}
+              onChange={async (event: ChangeEvent<HTMLInputElement>) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                if (!file) return;
+
+                setResumeError("");
+                setIsReadingResume(true);
+                try {
+                  const formData = new FormData();
+                  formData.set("file", file);
+                  const response = await fetch("/api/resume", {
+                    method: "POST",
+                    body: formData,
+                  });
+                  const result = (await response.json()) as {
+                    chunks?: string[];
+                    error?: string;
+                  };
+
+                  if (!response.ok || !Array.isArray(result.chunks)) {
+                    throw new Error(result.error ?? "Could not read this resume.");
+                  }
+
+                  setResumeChunks(result.chunks);
+                  setResumeFileName(file.name);
+                } catch (uploadError) {
+                  setResumeError(
+                    uploadError instanceof Error
+                      ? uploadError.message
+                      : "Could not read this resume."
+                  );
+                } finally {
+                  setIsReadingResume(false);
+                }
+              }}
+              className="max-w-full text-xs text-stage-paperMuted file:mr-3 file:rounded-sm file:border-0 file:bg-stage-brass file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-stage-bg"
+            />
+            {resumeFileName && (
+              <>
+                <span className="text-xs text-stage-sage">
+                  Ready: {resumeFileName}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResumeChunks([]);
+                    setResumeFileName("");
+                    setResumeError("");
+                  }}
+                  disabled={isLoading || isReadingResume}
+                  className="text-xs text-stage-paperMuted underline underline-offset-2 disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </>
+            )}
+            {isReadingResume && (
+              <span className="text-xs text-stage-paperMuted" role="status">
+                Reading resume…
+              </span>
+            )}
+          </div>
+          {resumeError && (
+            <p className="mt-2 text-xs text-stage-clay" role="alert">
+              {resumeError}
+            </p>
+          )}
+        </section>
+      )}
+
       {!ended && (
         <form
           onSubmit={(e) =>
-            handleSubmit(e, { body: { personaId: persona.id, mode: "roleplay" } })
+            handleSubmit(e, {
+              body: { personaId: persona.id, mode: "roleplay", resumeChunks },
+            })
           }
           className="mt-6 flex gap-2 border-t border-stage-border pt-4"
         >
@@ -255,13 +353,13 @@ function RehearsalRoom({
             placeholder="Deliver your line..."
             aria-label="Your reply"
             maxLength={MAX_MESSAGE_LENGTH}
-            disabled={isLoading}
+            disabled={isLoading || isReadingResume}
             className="flex-1 bg-transparent font-script text-sm text-stage-paper placeholder:text-stage-paperMuted focus:outline-none"
             autoFocus
           />
           <button
             type="submit"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || isReadingResume || !input.trim()}
             className="rounded-sm bg-stage-brass px-4 py-1.5 text-xs font-medium text-stage-bg disabled:opacity-30"
           >
             Send
