@@ -39,6 +39,16 @@ prompt that defines how it behaves and de-escalates/escalates in character.
 Adding a new practice scenario is: add one object to the `PERSONAS` array.
 No retraining, no redeploying a model — just edit the array and push.
 
+## Resume-based interview
+
+The Hiring Manager rehearsal optionally accepts PDF, DOCX, TXT, and Markdown
+resumes up to 5 MB. `app/api/resume/route.ts` extracts text and
+`lib/resume-rag.ts` splits it into overlapping chunks. During the interview,
+the chat route selects a few chunks by keyword overlap and adds them as
+untrusted reference context for Claude. This lightweight retrieval needs no
+vector database or embedding service. Scanned image-only PDFs are not
+supported. Resume text stays in page memory and is not saved by this app.
+
 ## Extending this
 
 - **More personas**: add entries to `lib/personas.ts`.
