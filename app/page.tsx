@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useChat } from "ai/react";
 import { PERSONAS, type Persona } from "@/lib/personas";
 
+const FEEDBACK_REQUEST =
+  "[The rehearsal has ended. Please drop character and give me feedback on how I handled this conversation.]";
+
 export default function Home() {
   const [selected, setSelected] = useState<Persona | null>(null);
 
@@ -100,8 +103,16 @@ function RehearsalRoom({
   onExit: () => void;
 }) {
   const [ended, setEnded] = useState(false);
-  const { messages, input, handleInputChange, handleSubmit, append, isLoading } =
-    useChat({
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    append,
+    reload,
+    error,
+    isLoading,
+  } = useChat({
       api: "/api/chat",
       initialMessages: [
         { id: "opening", role: "assistant", content: persona.opening },
@@ -114,12 +125,18 @@ function RehearsalRoom({
     append(
       {
         role: "user",
-        content:
-          "[The rehearsal has ended. Please drop character and give me feedback on how I handled this conversation.]",
+        content: FEEDBACK_REQUEST,
       },
       { body: { personaId: persona.id, mode: "feedback" } }
     );
   }
+
+  const visibleMessages = messages.filter(
+    (message) => message.content !== FEEDBACK_REQUEST
+  );
+  const feedbackRequestIndex = messages.findIndex(
+    (message) => message.content === FEEDBACK_REQUEST
+  );
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col px-6 py-8">
@@ -150,33 +167,68 @@ function RehearsalRoom({
       </div>
 
       <div className="script-scroll mt-6 flex-1 space-y-5 overflow-y-auto pr-1">
-        {messages.map((m) => (
-          <div key={m.id} className="font-script text-[15px] leading-relaxed">
-            <span
-              className={
-                m.role === "user"
-                  ? "text-stage-sage"
-                  : ended && m === messages[messages.length - 1]
-                  ? "text-stage-brass"
-                  : "text-stage-paper"
-              }
-            >
-              {m.role === "user"
-                ? "YOU"
-                : ended && m === messages[messages.length - 1]
-                ? "COACH"
-                : persona.name.split(" ")[0].toUpperCase()}
-            </span>
-            <span className="text-stage-paperMuted">: </span>
-            <span className="text-stage-paper">{m.content}</span>
-          </div>
-        ))}
+        {visibleMessages.map((m) => {
+          const isCoachMessage =
+            ended &&
+            feedbackRequestIndex >= 0 &&
+            m.role === "assistant" &&
+            messages.indexOf(m) > feedbackRequestIndex;
+
+          return (
+            <div key={m.id} className="font-script text-[15px] leading-relaxed">
+              <span
+                className={
+                  m.role === "user"
+                    ? "text-stage-sage"
+                    : isCoachMessage
+                    ? "text-stage-brass"
+                    : "text-stage-paper"
+                }
+              >
+                {m.role === "user"
+                  ? "YOU"
+                  : isCoachMessage
+                  ? "COACH"
+                  : persona.name.split(" ")[0].toUpperCase()}
+              </span>
+              <span className="text-stage-paperMuted">: </span>
+              <span className="text-stage-paper">{m.content}</span>
+            </div>
+          );
+        })}
         {isLoading && (
           <p className="font-script text-xs text-stage-paperMuted">
-            ...
+            {ended ? "Your coach is reviewing the conversation…" : "…"}
           </p>
         )}
       </div>
+
+      {error && (
+        <div
+          className="mt-4 flex items-center justify-between gap-4 border border-stage-clay p-3 text-sm text-stage-paperMuted"
+          role="alert"
+        >
+          <span>
+            {ended
+              ? "Feedback failed to load. Your transcript is still here."
+              : "That reply failed to send."}
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              reload({
+                body: {
+                  personaId: persona.id,
+                  mode: ended ? "feedback" : "roleplay",
+                },
+              })
+            }
+            className="shrink-0 text-stage-brass underline underline-offset-2"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {!ended && (
         <form
@@ -189,6 +241,8 @@ function RehearsalRoom({
             value={input}
             onChange={handleInputChange}
             placeholder="Deliver your line..."
+            aria-label="Your reply"
+            disabled={isLoading}
             className="flex-1 bg-transparent font-script text-sm text-stage-paper placeholder:text-stage-paperMuted focus:outline-none"
             autoFocus
           />

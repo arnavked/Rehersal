@@ -27,6 +27,10 @@ Open http://localhost:3000
    `ANTHROPIC_API_KEY` with your real key.
 4. Deploy. That's it — no other infra, no GPU, no separate backend.
 
+The chat route limits transcript size and model output. It does not authenticate
+users or enforce a per-user quota, so add hosting-level rate limits before
+opening a public deployment to significant traffic.
+
 ## Where the actual product content lives
 
 `lib/personas.ts` — this is the whole IP of the product. Each persona is a
@@ -39,9 +43,9 @@ No retraining, no redeploying a model — just edit the array and push.
 
 - **More personas**: add entries to `lib/personas.ts`.
 - **Persistence** (save past rehearsals, track improvement over time): add a
-  database (Vercel Postgres / Supabase) and a `sessions` table — the chat
-  route already isolates each conversation by persona + mode, so this is an
-  additive change, not a rewrite.
+  database (Vercel Postgres / Supabase), a `sessions` table, and session IDs.
+  The chat route is currently stateless: each request includes its transcript,
+  persona, and mode, and nothing is saved between visits.
 - **Voice mode**: the Vercel AI SDK supports streaming audio providers if you
   want spoken rehearsal instead of typed.
 - **Swapping model providers**: change the `anthropic(...)` call in
